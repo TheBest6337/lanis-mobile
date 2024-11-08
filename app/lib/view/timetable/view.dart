@@ -24,7 +24,33 @@ class StaticTimetableView extends StatefulWidget {
 
 class _StaticTimetableViewState extends State<StaticTimetableView> {
   TimeTableType selectedType = TimeTableType.OWN;
-  // todo create settings to set the default view
+  String selectedFilter = 'All';
+
+  // Add a list of filter options
+  final List<String> filterOptions = ['All', 'WA', 'WB'];
+
+  // Add a method to handle filter changes
+  void onFilterChanged(String? newFilter) {
+    setState(() {
+      selectedFilter = newFilter!;
+    });
+  }
+
+  // Add a method to check if there are more than one "WA" or "WB" badges
+  bool shouldShowDropdown() {
+    if (widget.data == null) return false;
+
+    int count = 0;
+    for (var day in getSelectedPlan()) {
+      for (var lesson in day) {
+        if (lesson.badge == 'WA' || lesson.badge == 'WB') {
+          count++;
+          if (count > 1) return true;
+        }
+      }
+    }
+    return false;
+  }
 
   Widget modalSheetItem(String content, IconData icon) {
     return Padding(
@@ -66,67 +92,85 @@ class _StaticTimetableViewState extends State<StaticTimetableView> {
         ],
       ));
     }
-    return SfCalendar(
-      view: DateTime.now().weekday == DateTime.saturday || DateTime.now().weekday == DateTime.sunday
-          ? CalendarView.week
-          : CalendarView.workWeek,
-      allowedViews: [
-        CalendarView.day,
-        CalendarView.week,
-        CalendarView.workWeek,
-      ],
-      timeSlotViewSettings: const TimeSlotViewSettings(
-        timeFormat: "HH:mm",
-      ),
-      dataSource: TimeTableDataSource(getSelectedPlan()),
-      minDate: DateTime.now(),
-      maxDate: DateTime.now().add(const Duration(days: 7)),
-      onTap: (details) {
-        if (details.appointments != null) {
-          final appointment = details.appointments!.first;
+    return Column(
+      children: [
+        // Conditionally show the dropdown menu
+        if (shouldShowDropdown())
+          DropdownButton<String>(
+            value: selectedFilter,
+            items: filterOptions.map((String value) {
+              return DropdownMenuItem<String>(
+                value: value,
+                child: Text(value),
+              );
+            }).toList(),
+            onChanged: onFilterChanged,
+          ),
+        Expanded(
+          child: SfCalendar(
+            view: DateTime.now().weekday == DateTime.saturday || DateTime.now().weekday == DateTime.sunday
+                ? CalendarView.week
+                : CalendarView.workWeek,
+            allowedViews: [
+              CalendarView.day,
+              CalendarView.week,
+              CalendarView.workWeek,
+            ],
+            timeSlotViewSettings: const TimeSlotViewSettings(
+              timeFormat: "HH:mm",
+            ),
+            dataSource: TimeTableDataSource(getSelectedPlan(), selectedFilter),
+            minDate: DateTime.now(),
+            maxDate: DateTime.now().add(const Duration(days: 7)),
+            onTap: (details) {
+              if (details.appointments != null) {
+                final appointment = details.appointments!.first;
 
-          final helperIDs =
-          appointment.id.split("-").map(int.parse).toList();
-          final StdPlanFach selected =
-          (getSelectedPlan()[helperIDs[0]][helperIDs[1]]);
+                final helperIDs =
+                appointment.id.split("-").map(int.parse).toList();
+                final StdPlanFach selected =
+                (getSelectedPlan()[helperIDs[0]][helperIDs[1]]);
 
-          showModalBottomSheet(
-              context: context,
-              showDragHandle: true,
-              builder: (context) {
-                return SizedBox(
-                  width: double.infinity,
-                  child: Padding(
-                    padding: const EdgeInsets.only(
-                        left: 20.0, right: 20.0, bottom: 20.0),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Title
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 8.0),
-                          child: Text(
-                            selected.name ?? "Unbekanntes Fach",
-                            style: Theme.of(context).textTheme.titleLarge,
+                showModalBottomSheet(
+                    context: context,
+                    showDragHandle: true,
+                    builder: (context) {
+                      return SizedBox(
+                        width: double.infinity,
+                        child: Padding(
+                          padding: const EdgeInsets.only(
+                              left: 20.0, right: 20.0, bottom: 20.0),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Title
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 8.0),
+                                child: Text(
+                                  selected.name ?? "Unbekanntes Fach",
+                                  style: Theme.of(context).textTheme.titleLarge,
+                                ),
+                              ),
+                              if (selected.raum != null)
+                                modalSheetItem(selected.raum!, Icons.place),
+                              modalSheetItem(
+                                  "${selected.startTime.hour}:${selected.startTime.minute} - ${selected.endTime.hour}:${selected.endTime.minute} (${selected.duration} ${selected.duration == 1 ? "Stunde" : "Stunden"})",
+                                  Icons.access_time),
+                              if (selected.lehrer != null)
+                                modalSheetItem(selected.lehrer!, Icons.person),
+                              if (selected.badge != null)
+                                modalSheetItem(selected.badge!, Icons.info),
+                            ],
                           ),
                         ),
-                        if (selected.raum != null)
-                          modalSheetItem(selected.raum!, Icons.place),
-                        modalSheetItem(
-                            "${selected.startTime.hour}:${selected.startTime.minute} - ${selected.endTime.hour}:${selected.endTime.minute} (${selected.duration} ${selected.duration == 1 ? "Stunde" : "Stunden"})",
-                            Icons.access_time),
-                        if (selected.lehrer != null)
-                          modalSheetItem(selected.lehrer!, Icons.person),
-                        if (selected.badge != null)
-                          modalSheetItem(selected.badge!, Icons.info),
-                      ],
-                    ),
-                  ),
-                );
-              });
-        }
-      },
+                      );
+                    });
+              }
+            },
+          ),
+        ),
+      ],
     );
   }
 
@@ -176,7 +220,7 @@ class _StaticTimetableViewState extends State<StaticTimetableView> {
 }
 
 class TimeTableDataSource extends CalendarDataSource {
-  TimeTableDataSource(List<Day>? data) {
+  TimeTableDataSource(List<Day>? data, String filter) {
     final now = DateTime.now();
     final lastMonday = now.subtract(Duration(days: now.weekday - 1));
     var events = <Appointment>[];
@@ -185,42 +229,45 @@ class TimeTableDataSource extends CalendarDataSource {
       final date = lastMonday.add(Duration(days: dayIndex));
 
       for (var (lessonIndex, lesson) in day.indexed) {
-        // Use the calculated date for the startTime and endTime
-        final startTime = DateTime(date.year, date.month, date.day,
-            lesson.startTime.hour, lesson.startTime.minute);
-        final endTime = DateTime(date.year, date.month, date.day,
-            lesson.endTime.hour, lesson.endTime.minute);
+        // Filter lessons based on the selected filter
+        if (filter == 'All' || lesson.badge == filter || lesson.badge == null) {
+          // Use the calculated date for the startTime and endTime
+          final startTime = DateTime(date.year, date.month, date.day,
+              lesson.startTime.hour, lesson.startTime.minute);
+          final endTime = DateTime(date.year, date.month, date.day,
+              lesson.endTime.hour, lesson.endTime.minute);
 
-        final Color entryColor = generateColor(lesson.name!, Colors.blue);
+          final Color entryColor = generateColor(lesson.name!, Colors.blue);
 
-        //1 week before
-        events.add(Appointment(
-            startTime: startTime.subtract(const Duration(days: 7)),
-            endTime: endTime.subtract(const Duration(days: 7)),
-            subject: "${lesson.name!} ${lesson.lehrer} ${lesson.raum??""}",
-            location: lesson.raum,
-            notes: lesson.badge,
-            color: entryColor,
-            id: "${dayIndex}-${lessonIndex}-1"));
+          //1 week before
+          events.add(Appointment(
+              startTime: startTime.subtract(const Duration(days: 7)),
+              endTime: endTime.subtract(const Duration(days: 7)),
+              subject: "${lesson.name!} ${lesson.lehrer} ${lesson.raum??""}",
+              location: lesson.raum,
+              notes: lesson.badge,
+              color: entryColor,
+              id: "${dayIndex}-${lessonIndex}-1"));
 
-        events.add(Appointment(
-            startTime: startTime,
-            endTime: endTime,
-            subject: "${lesson.name!} ${lesson.lehrer} ${lesson.raum??""}",
-            location: lesson.raum,
-            notes: lesson.badge,
-            color: entryColor,
-            id: "${dayIndex}-${lessonIndex}-2"));
+          events.add(Appointment(
+              startTime: startTime,
+              endTime: endTime,
+              subject: "${lesson.name!} ${lesson.lehrer} ${lesson.raum??""}",
+              location: lesson.raum,
+              notes: lesson.badge,
+              color: entryColor,
+              id: "${dayIndex}-${lessonIndex}-2"));
 
-        //1 week later
-        events.add(Appointment(
-            startTime: startTime.add(const Duration(days: 7)),
-            endTime: endTime.add(const Duration(days: 7)),
-            subject: "${lesson.name!} ${lesson.lehrer} ${lesson.raum??""}",
-            location: lesson.raum,
-            notes: lesson.lehrer,
-            color: entryColor,
-            id: "${dayIndex}-${lessonIndex}-3"));
+          //1 week later
+          events.add(Appointment(
+              startTime: startTime.add(const Duration(days: 7)),
+              endTime: endTime.add(const Duration(days: 7)),
+              subject: "${lesson.name!} ${lesson.lehrer} ${lesson.raum??""}",
+              location: lesson.raum,
+              notes: lesson.badge,
+              color: entryColor,
+              id: "${dayIndex}-${lessonIndex}-3"));
+        }
       }
     }
 
