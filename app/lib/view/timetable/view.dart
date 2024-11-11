@@ -27,7 +27,39 @@ class _StaticTimetableViewState extends State<StaticTimetableView> {
   String selectedFilter = 'All';
 
   // Add a list of filter options
-  final List<String> filterOptions = ['All', 'WA', 'WB'];
+  List<String> filterOptions = ['All'];
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.data != null) {
+      filterOptions.addAll(extractUniqueBadges(widget.data!));
+      print("Debug: Filter options: $filterOptions");
+    }
+  }
+
+  @override
+  void didUpdateWidget(StaticTimetableView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.data != oldWidget.data && widget.data != null) {
+      filterOptions = ['All'];
+      filterOptions.addAll(extractUniqueBadges(widget.data!));
+      print("Debug: Filter options updated: $filterOptions");
+    }
+  }
+
+  // Method to extract unique week type badges
+  List<String> extractUniqueBadges(TimeTable data) {
+    Set<String> badges = {};
+    for (var day in data.planForOwn!) {
+      for (var lesson in day) {
+        if (lesson.badge != null) {
+          badges.add(lesson.badge!);
+        }
+      }
+    }
+    return badges.toList();
+  }
 
   // Add a method to handle filter changes
   void onFilterChanged(String? newFilter) {
@@ -36,20 +68,9 @@ class _StaticTimetableViewState extends State<StaticTimetableView> {
     });
   }
 
-  // Add a method to check if there are more than one "WA" or "WB" badges
+  // Add a method to check if there are more than one unique badges
   bool shouldShowDropdown() {
-    if (widget.data == null) return false;
-
-    int count = 0;
-    for (var day in getSelectedPlan()) {
-      for (var lesson in day) {
-        if (lesson.badge == 'WA' || lesson.badge == 'WB') {
-          count++;
-          if (count > 1) return true;
-        }
-      }
-    }
-    return false;
+    return filterOptions.length >= 2; // 'All' + at least one unique badge
   }
 
   Widget modalSheetItem(String content, IconData icon) {
