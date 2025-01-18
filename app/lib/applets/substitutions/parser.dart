@@ -256,4 +256,15 @@ class SubstitutionsParser extends AppletParser<SubstitutionPlan> {
 
     return infos;
   }
+
+  bool filterElement(String? value, List<String> filter, bool? strict) {
+    if (value == null) {
+      return false;
+    }
+    if (strict == true) {
+      return filter.any((element) => value == element);
+    } else {
+      return filter.any((element) => value.contains(element));
+    }
+  }
 }

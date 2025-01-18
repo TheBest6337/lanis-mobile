@@ -100,15 +100,11 @@ class Substitution {
     if (value == null) {
       return false;
     }
-    if (!(strict ?? true)) {
+    if (strict == true) {
+      return filter.any((element) => value == element);
+    } else {
       return filter.any((element) => value.contains(element));
     }
-    for (var singleFilter in filter) {
-      if (!value.contains(singleFilter)) {
-        return false;
-      }
-    }
-    return true;
   }
 
   Map<String, dynamic> toJson() => {
