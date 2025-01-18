@@ -10,6 +10,7 @@ import 'package:intl/intl.dart';
 import '../../core/applet_parser.dart';
 import '../../models/client_status_exceptions.dart';
 import '../../models/substitution.dart';
+import '../../utils/logger.dart';
 
 class SubstitutionsParser extends AppletParser<SubstitutionPlan> {
   final DateFormat entryFormat = DateFormat('dd_MM_yyyy');
@@ -258,6 +259,7 @@ class SubstitutionsParser extends AppletParser<SubstitutionPlan> {
   }
 
   bool filterElement(String? value, List<String> filter, bool? strict) {
+    logger.d("Filtering value: $value with filter: $filter and strict: $strict");
     if (value == null) {
       return false;
     }
