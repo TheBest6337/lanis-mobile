@@ -97,7 +97,6 @@ class Substitution {
 
   ///returns true if the value contains all of the filter elements
   bool filterElement(String? value, List<String> filter, bool? strict) {
-    logger.d("Filtering value: $value with filter: $filter and strict: $strict");
     if (value == null) {
       return false;
     }
