@@ -263,7 +263,7 @@ class SubstitutionsParser extends AppletParser<SubstitutionPlan> {
       return false;
     }
     if (strict == true) {
-      return filter.any((element) => value == element);
+      return filter.any((element) => value == element && value.length == element.length);
     } else {
       return filter.any((element) => value.contains(element));
     }
