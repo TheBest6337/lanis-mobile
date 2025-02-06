@@ -8,10 +8,13 @@ import java.io.FileInputStream
 import java.io.FileNotFoundException
 import java.io.FileOutputStream
 import java.io.IOException
-
+import android.net.Uri
+import android.provider.OpenableColumns
+import android.database.Cursor
 
 class MainActivity: FlutterActivity() {
     private val createFileCode = 1404
+    private val readFileCode = 1405
     private var filePath = ""
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
@@ -23,6 +26,9 @@ class MainActivity: FlutterActivity() {
                 "saveFile" -> {
                     filePath = call.argument<String>("filePath").toString()
                     createFile(call.argument<String>("fileName").toString(), call.argument<String>("mimeType").toString())
+                }
+                "readFile" -> {
+                    openFilePicker()
                 }
                 else -> {
                     result.notImplemented()
@@ -49,6 +55,19 @@ class MainActivity: FlutterActivity() {
                     e.printStackTrace()
                 }
             }
+        } else if (requestCode == readFileCode) {
+            data?.data?.let { uri ->
+                try {
+                    val inputStream = contentResolver.openInputStream(uri)
+                    val fileContent = inputStream?.bufferedReader().use { it?.readText() }
+                    val fileName = getFileName(uri)
+                    MethodChannel(flutterEngine?.dartExecutor?.binaryMessenger, STORAGE_CHANNEL).invokeMethod("fileRead", mapOf("fileName" to fileName, "fileContent" to fileContent))
+                } catch (e: FileNotFoundException) {
+                    e.printStackTrace()
+                } catch (e: IOException) {
+                    e.printStackTrace()
+                }
+            }
         }
     }
 
@@ -59,6 +78,25 @@ class MainActivity: FlutterActivity() {
             putExtra(Intent.EXTRA_TITLE, fileName)
         }
         startActivityForResult(intent, createFileCode)
+    }
+
+    private fun openFilePicker() {
+        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            type = "application/json"
+        }
+        startActivityForResult(intent, readFileCode)
+    }
+
+    private fun getFileName(uri: Uri): String? {
+        var fileName: String? = null
+        val cursor: Cursor? = contentResolver.query(uri, null, null, null, null)
+        cursor?.use {
+            if (it.moveToFirst()) {
+                fileName = it.getString(it.getColumnIndex(OpenableColumns.DISPLAY_NAME))
+            }
+        }
+        return fileName
     }
 
     companion object {

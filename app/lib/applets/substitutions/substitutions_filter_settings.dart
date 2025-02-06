@@ -1,9 +1,12 @@
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:sph_plan/generated/l10n.dart';
 
 import '../../core/sph/sph.dart';
 import 'chips_input.dart';
-
 
 class SubstitutionsFilterSettings extends StatefulWidget {
   const SubstitutionsFilterSettings({super.key});
@@ -14,6 +17,38 @@ class SubstitutionsFilterSettings extends StatefulWidget {
 
 class _SubstitutionsFilterSettingsState extends State<SubstitutionsFilterSettings> {
   bool loadingFilter = false;
+
+  Future<void> exportFilterSettings() async {
+    final filterSettings = jsonEncode(sph!.parser.substitutionsParser.localFilter);
+    final directory = await getApplicationDocumentsDirectory();
+    final file = File('${directory.path}/filter_settings.json');
+    await file.writeAsString(filterSettings);
+
+    const platform = MethodChannel('io.github.lanis-mobile/storage');
+    await platform.invokeMethod('saveFile', {
+      'fileName': 'filter_settings.json',
+      'mimeType': 'application/json',
+      'filePath': file.path,
+    });
+  }
+
+  Future<void> importFilterSettings() async {
+    FilePickerResult? result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['json'],
+    );
+
+    if (result != null) {
+      File file = File(result.files.single.path!);
+      String content = await file.readAsString();
+      Map<String, dynamic> importedFilter = jsonDecode(content);
+      setState(() {
+        sph!.parser.substitutionsParser.localFilter = importedFilter;
+        sph!.parser.substitutionsParser.saveFilterToStorage();
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -30,6 +65,14 @@ class _SubstitutionsFilterSettingsState extends State<SubstitutionsFilterSetting
                 Navigator.pop(context);
               },
               child: Text(AppLocalizations.of(context)!.reset),
+            ),
+            ElevatedButton(
+              onPressed: exportFilterSettings,
+              child: Text(AppLocalizations.of(context)!.exportFilterSettings),
+            ),
+            ElevatedButton(
+              onPressed: importFilterSettings,
+              child: Text(AppLocalizations.of(context)!.importFilterSettings),
             ),
             const SubstitutionFilterEditor(objKey: "Klasse", title: 'Klasse'),
             const SubstitutionFilterEditor(objKey: "Fach", title: 'Fach'),
