@@ -50,6 +50,41 @@ class AppletDefinition {
     this.bodyBuilder,
     this.allowOffline = false,
   });
+
+  Future<void> importTimetableSettings(
+      Future<void> Function(String, dynamic) updateSettings) async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['json'],
+    );
+
+    if (result != null && result.files.isNotEmpty) {
+      final file = File(result.files.single.path!);
+      final jsonString = await file.readAsString();
+      final Map<String, dynamic> importedSettings = jsonDecode(jsonString);
+
+      for (var key in importedSettings.keys) {
+        await updateSettings(key, importedSettings[key]);
+      }
+
+      showSnackbar(context, 'Timetable settings imported successfully.');
+    }
+  }
+
+  Future<void> exportTimetableSettings(Map<String, dynamic> settings) async {
+    final jsonString = jsonEncode(settings);
+    final fileName = 'timetable_settings.json';
+    final result = await FilePicker.platform.saveFile(
+      dialogTitle: 'Save Timetable Settings',
+      fileName: fileName,
+    );
+
+    if (result != null) {
+      final file = File(result);
+      await file.writeAsString(jsonString);
+      showSnackbar(context, 'Timetable settings exported successfully.');
+    }
+  }
 }
 
 class AppDefinitions {
