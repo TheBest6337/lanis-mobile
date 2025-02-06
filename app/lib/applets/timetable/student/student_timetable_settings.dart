@@ -7,6 +7,8 @@ import 'package:sph_plan/applets/timetable/definition.dart';
 import 'package:sph_plan/applets/timetable/student/student_timetable_view.dart';
 import 'package:sph_plan/models/account_types.dart';
 import 'package:sph_plan/widgets/combined_applet_builder.dart';
+import 'package:file_picker/file_picker.dart';
+import 'dart:convert';
 
 import '../../../core/sph/sph.dart';
 import '../../../models/timetable.dart';
@@ -248,6 +250,41 @@ class _StudentTimetableSettingsState extends State<StudentTimetableSettings> {
         });
   }
 
+  Future<void> exportTimetableSettings(Map<String, dynamic> settings) async {
+    final jsonString = jsonEncode(settings);
+    final fileName = 'timetable_settings.json';
+    final result = await FilePicker.platform.saveFile(
+      dialogTitle: 'Save Timetable Settings',
+      fileName: fileName,
+    );
+
+    if (result != null) {
+      final file = File(result);
+      await file.writeAsString(jsonString);
+      showSnackbar(context, 'Timetable settings exported successfully.');
+    }
+  }
+
+  Future<void> importTimetableSettings(
+      Future<void> Function(String, dynamic) updateSettings) async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['json'],
+    );
+
+    if (result != null && result.files.isNotEmpty) {
+      final file = File(result.files.single.path!);
+      final jsonString = await file.readAsString();
+      final Map<String, dynamic> importedSettings = jsonDecode(jsonString);
+
+      for (var key in importedSettings.keys) {
+        await updateSettings(key, importedSettings[key]);
+      }
+
+      showSnackbar(context, 'Timetable settings imported successfully.');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -259,6 +296,39 @@ class _StudentTimetableSettingsState extends State<StudentTimetableSettings> {
                 onPressed: () => widget.openDrawerCb!(),
               )
             : null,
+        actions: [
+          IconButton(
+            icon: Icon(Icons.import_export),
+            onPressed: () async {
+              await showModalBottomSheet(
+                context: context,
+                builder: (BuildContext context) {
+                  return Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      ListTile(
+                        leading: Icon(Icons.file_upload),
+                        title: Text('Export Timetable Settings'),
+                        onTap: () async {
+                          Navigator.pop(context);
+                          await exportTimetableSettings(settings);
+                        },
+                      ),
+                      ListTile(
+                        leading: Icon(Icons.file_download),
+                        title: Text('Import Timetable Settings'),
+                        onTap: () async {
+                          Navigator.pop(context);
+                          await importTimetableSettings(updateSettings);
+                        },
+                      ),
+                    ],
+                  );
+                },
+              );
+            },
+          ),
+        ],
       ),
       body: CombinedAppletBuilder<TimeTable>(
         parser: sph!.parser.timetableStudentParser,

@@ -26,4 +26,12 @@ final timeTableDefinition = AppletDefinition(
       return Placeholder();
     }
   },
+  options: {
+    'import': (context, updateSettings) async {
+      await importTimetableSettings(updateSettings);
+    },
+    'export': (context, settings) async {
+      await exportTimetableSettings(settings);
+    },
+  },
 );
