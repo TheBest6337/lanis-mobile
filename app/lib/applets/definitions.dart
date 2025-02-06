@@ -7,6 +7,9 @@ import 'package:sph_plan/applets/study_groups/definitions.dart';
 import 'package:sph_plan/applets/substitutions/definition.dart';
 import 'package:sph_plan/applets/timetable/definition.dart';
 import 'package:sph_plan/models/account_types.dart';
+import 'dart:convert';
+import 'dart:io';
+import 'package:file_picker/file_picker.dart';
 
 import '../background_service.dart';
 import '../core/sph/sph.dart';
@@ -84,6 +87,14 @@ class AppletDefinition {
       await file.writeAsString(jsonString);
       showSnackbar(context, 'Timetable settings exported successfully.');
     }
+  }
+
+  void showSnackbar(BuildContext context, String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+      ),
+    );
   }
 }
 
