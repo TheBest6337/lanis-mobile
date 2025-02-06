@@ -14,6 +14,7 @@ class SubstitutionsFilterSettings extends StatefulWidget {
 
 class _SubstitutionsFilterSettingsState extends State<SubstitutionsFilterSettings> {
   bool loadingFilter = false;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -30,6 +31,19 @@ class _SubstitutionsFilterSettingsState extends State<SubstitutionsFilterSetting
                 Navigator.pop(context);
               },
               child: Text(AppLocalizations.of(context)!.reset),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                await sph!.parser.substitutionsParser.importFilterSettings();
+                setState(() {});
+              },
+              child: Text(AppLocalizations.of(context)!.importSettings),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                await sph!.parser.substitutionsParser.exportFilterSettings();
+              },
+              child: Text(AppLocalizations.of(context)!.exportSettings),
             ),
             const SubstitutionFilterEditor(objKey: "Klasse", title: 'Klasse'),
             const SubstitutionFilterEditor(objKey: "Fach", title: 'Fach'),

@@ -31,6 +31,14 @@ class SubstitutionsParser extends AppletParser<SubstitutionPlan> {
         {};
   }
 
+  Future<void> importFilterSettings() async {
+    // Implement the logic to import filter settings
+  }
+
+  Future<void> exportFilterSettings() async {
+    // Implement the logic to export filter settings
+  }
+
   @override
   SubstitutionPlan typeFromJson(String json) {
     return SubstitutionPlan.fromJson(jsonDecode(json));
