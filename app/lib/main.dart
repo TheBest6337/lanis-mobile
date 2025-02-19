@@ -15,6 +15,7 @@ import 'package:sph_plan/themes.dart';
 import 'package:sph_plan/utils/authentication_state.dart';
 import 'package:stack_trace/stack_trace.dart';
 import 'package:syncfusion_localizations/syncfusion_localizations.dart';
+import 'package:wear/wear.dart';
 
 import 'applets/conversations/view/shared.dart';
 import 'background_service.dart';
@@ -71,79 +72,83 @@ class App extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder(
-      stream: accountDatabase.kv.subscribeMultiple(['color', 'theme', 'is-amoled']),
-      builder: (BuildContext context, AsyncSnapshot<Map<String, dynamic>> snapshot) {
-        late ThemeMode mode;
-        late Themes theme;
-        if (snapshot.hasData) {
-          mode = snapshot.data!['theme'] == 'system' ? ThemeMode.system : snapshot.data!['theme'] == 'dark' ? ThemeMode.dark : ThemeMode.light;
+    return WatchShape(
+      builder: (context, shape, child) {
+        return StreamBuilder(
+          stream: accountDatabase.kv.subscribeMultiple(['color', 'theme', 'is-amoled']),
+          builder: (BuildContext context, AsyncSnapshot<Map<String, dynamic>> snapshot) {
+            late ThemeMode mode;
+            late Themes theme;
+            if (snapshot.hasData) {
+              mode = snapshot.data!['theme'] == 'system' ? ThemeMode.system : snapshot.data!['theme'] == 'dark' ? ThemeMode.dark : ThemeMode.light;
 
-          if (snapshot.data!['color'] == 'standard') {
-            theme = Themes.standardTheme;
-          } else if (snapshot.data!['color'] != 'standard' && snapshot.data!['color'] != 'dynamic') {
-            if (Themes.flutterColorThemes.containsKey(snapshot.data!['color'])) {
-              theme = Themes.flutterColorThemes[snapshot.data!['color']!]!;
+              if (snapshot.data!['color'] == 'standard') {
+                theme = Themes.standardTheme;
+              } else if (snapshot.data!['color'] != 'standard' && snapshot.data!['color'] != 'dynamic') {
+                if (Themes.flutterColorThemes.containsKey(snapshot.data!['color'])) {
+                  theme = Themes.flutterColorThemes[snapshot.data!['color']!]!;
+                } else {
+                  theme = Themes.standardTheme;
+                }
+              } else {
+                theme = Themes.standardTheme;
+              }
+              if (snapshot.data!['is-amoled'] == true) {
+                theme = Themes.getAmoledThemes(theme);
+              }
             } else {
+              mode = ThemeMode.system;
               theme = Themes.standardTheme;
             }
-          } else {
-            theme = Themes.standardTheme;
-          }
-          if (snapshot.data!['is-amoled'] == true) {
-            theme = Themes.getAmoledThemes(theme);
-          }
-        } else {
-          mode = ThemeMode.system;
-          theme = Themes.standardTheme;
-        }
-        return DynamicColorBuilder(builder: (lightDynamic, darkDynamic) {
-          if (lightDynamic != null && darkDynamic != null) {
-            Themes.dynamicTheme = Themes.getNewTheme(lightDynamic.primary);
-          }
-          if (snapshot.data?['color'] == 'dynamic') {
-            var dynamicTheme = Themes.dynamicTheme;
-            var darkTheme = dynamicTheme.darkTheme;
-            if (snapshot.data!['is-amoled'] == true) {
-              darkTheme = Themes.getAmoledThemes(dynamicTheme).darkTheme;
-            }
+            return DynamicColorBuilder(builder: (lightDynamic, darkDynamic) {
+              if (lightDynamic != null && darkDynamic != null) {
+                Themes.dynamicTheme = Themes.getNewTheme(lightDynamic.primary);
+              }
+              if (snapshot.data?['color'] == 'dynamic') {
+                var dynamicTheme = Themes.dynamicTheme;
+                var darkTheme = dynamicTheme.darkTheme;
+                if (snapshot.data!['is-amoled'] == true) {
+                  darkTheme = Themes.getAmoledThemes(dynamicTheme).darkTheme;
+                }
 
-            theme = Themes(
-              dynamicTheme.lightTheme,
-              darkTheme
-            );
-          }
+                theme = Themes(
+                  dynamicTheme.lightTheme,
+                  darkTheme
+                );
+              }
 
-          if (mode == ThemeMode.light ||
-              mode == ThemeMode.system &&
-                  MediaQuery.of(context).platformBrightness ==
-                      Brightness.light) {
-            BubbleStyles.init(theme.lightTheme!);
-          } else if (mode == ThemeMode.dark ||
-              mode == ThemeMode.system &&
-                  MediaQuery.of(context).platformBrightness ==
-                      Brightness.dark) {
-            BubbleStyles.init(theme.darkTheme ?? Themes.standardTheme.darkTheme!);
-          }
+              if (mode == ThemeMode.light ||
+                  mode == ThemeMode.system &&
+                      MediaQuery.of(context).platformBrightness ==
+                          Brightness.light) {
+                BubbleStyles.init(theme.lightTheme!);
+              } else if (mode == ThemeMode.dark ||
+                  mode == ThemeMode.system &&
+                      MediaQuery.of(context).platformBrightness ==
+                          Brightness.dark) {
+                BubbleStyles.init(theme.darkTheme ?? Themes.standardTheme.darkTheme!);
+              }
 
-          return MaterialApp(
-            title: 'Lanis Mobile',
-            theme: theme.lightTheme,
-            darkTheme: theme.darkTheme,
-            themeMode: mode,
-            localizationsDelegates: [
-              AppLocalizations.delegate,
-              GlobalMaterialLocalizations.delegate,
-              GlobalWidgetsLocalizations.delegate,
-              GlobalCupertinoLocalizations.delegate,
-              SfGlobalLocalizations.delegate
-            ],
-            supportedLocales: AppLocalizations.delegate.supportedLocales,
-            home: const Scaffold(
-              body: StartupScreen(),
-            ),
-          );
-        });
+              return MaterialApp(
+                title: 'Lanis Mobile',
+                theme: theme.lightTheme,
+                darkTheme: theme.darkTheme,
+                themeMode: mode,
+                localizationsDelegates: [
+                  AppLocalizations.delegate,
+                  GlobalMaterialLocalizations.delegate,
+                  GlobalWidgetsLocalizations.delegate,
+                  GlobalCupertinoLocalizations.delegate,
+                  SfGlobalLocalizations.delegate
+                ],
+                supportedLocales: AppLocalizations.delegate.supportedLocales,
+                home: const Scaffold(
+                  body: StartupScreen(),
+                ),
+              );
+            });
+          },
+        );
       },
     );
   }

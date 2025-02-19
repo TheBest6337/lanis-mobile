@@ -8,7 +8,7 @@ import java.io.FileInputStream
 import java.io.FileNotFoundException
 import java.io.FileOutputStream
 import java.io.IOException
-
+import com.google.android.wearable.activity.WearableActivity
 
 class MainActivity: FlutterActivity() {
     private val createFileCode = 1404
@@ -63,5 +63,13 @@ class MainActivity: FlutterActivity() {
 
     companion object {
         private const val STORAGE_CHANNEL = "io.github.lanis-mobile/storage"
+    }
+}
+
+class WearMainActivity : WearableActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_wear_main)
+        setAmbientEnabled()
     }
 }
