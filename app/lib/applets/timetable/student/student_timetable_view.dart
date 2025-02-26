@@ -153,6 +153,12 @@ class _StudentTimetableViewState extends State<StudentTimetableView> {
           "CalendarView.workWeek" => CalendarView.workWeek,
           String() => throw UnimplementedError(),
         };
+        
+        // Create data source before passing it to calendar
+        final TimeTableDataSource dataSource = TimeTableDataSource(
+            context, selectedPlan,
+            currentWeekIndex == 0 ? null : uniqueBadges[currentWeekIndex - 1],
+            settings);
 
         return Scaffold(
             appBar: AppBar(
@@ -182,13 +188,31 @@ class _StudentTimetableViewState extends State<StudentTimetableView> {
                     timeFormat: "HH:mm",
                   ),
                   firstDayOfWeek: DateTime.monday,
-                  dataSource: TimeTableDataSource(
-                      context,
-                      selectedPlan,
-                      currentWeekIndex == 0
-                          ? null
-                          : uniqueBadges[currentWeekIndex - 1],
-                      settings),
+                  dataSource: dataSource,
+                  appointmentBuilder: (BuildContext context, CalendarAppointmentDetails details) {
+                    final Appointment appointment = details.appointments.first as Appointment;
+                    
+                    // Use the data source we created earlier
+                    final Color textColor = dataSource.textColorMap[appointment.id] ?? Colors.black;
+                    
+                    return Container(
+                      decoration: BoxDecoration(
+                        color: appointment.color,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      width: details.bounds.width,
+                      height: details.bounds.height,
+                      padding: const EdgeInsets.all(4),
+                      child: Text(
+                        appointment.subject ?? '',
+                        style: TextStyle(
+                          color: textColor,
+                          fontSize: 12,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    );
+                  },
                   minDate: DateTime.now(),
                   maxDate: DateTime.now().add(const Duration(days: 7)),
                   controller: controller,
@@ -404,6 +428,19 @@ class TimeTableHelper {
     return RandomColor.bySeed(lesson.name!).primary;
   }
 
+  // Determine if a color is light to use appropriate contrasting text color
+  static Color getContrastingTextColor(Color backgroundColor) {
+    // Calculate relative luminance using the formula
+    // Luminance = 0.299*R + 0.587*G + 0.114*B
+    final double luminance = (0.299 * backgroundColor.red + 
+                              0.587 * backgroundColor.green + 
+                              0.114 * backgroundColor.blue) / 255;
+    
+    // Use white text for dark backgrounds, black text for light backgrounds
+    // The threshold of 0.5 is commonly used but can be adjusted
+    return luminance > 0.5 ? Colors.black : Colors.white;
+  }
+
   static List<List<T>> mergeByIndices<T>(
       List<List<T>> list1, List<List<T>>? list2) {
     final int maxLength = list1.length > (list2?.length ?? 0)
@@ -440,6 +477,9 @@ class TimeTableHelper {
 
 class TimeTableDataSource extends CalendarDataSource {
   BuildContext context;
+  // Map to store contrasting text colors for appointments
+  final Map<String, Color> textColorMap = {};
+  
   TimeTableDataSource(
       this.context, List<TimetableDay>? data, String? weekBadge, settings) {
     final now = DateTime.now();
@@ -474,6 +514,15 @@ class TimeTableDataSource extends CalendarDataSource {
 
         final Color entryColor =
             TimeTableHelper.getColorForLesson(settings, lesson);
+        
+        // Store the text color in the map keyed by appointment ID
+        final String id1 = "$dayIndex-$lessonIndex-1";
+        final String id2 = "$dayIndex-$lessonIndex-2";
+        final String id3 = "$dayIndex-$lessonIndex-3";
+        
+        textColorMap[id1] = TimeTableHelper.getContrastingTextColor(entryColor);
+        textColorMap[id2] = TimeTableHelper.getContrastingTextColor(entryColor);
+        textColorMap[id3] = TimeTableHelper.getContrastingTextColor(entryColor);
 
         //1 week before
         events.add(Appointment(
@@ -483,7 +532,7 @@ class TimeTableDataSource extends CalendarDataSource {
             location: lesson.raum,
             notes: lesson.badge,
             color: entryColor,
-            id: "$dayIndex-$lessonIndex-1"));
+            id: id1));
 
         if (isCurrentWeek(lesson, true)) {
           events.add(Appointment(
@@ -493,7 +542,7 @@ class TimeTableDataSource extends CalendarDataSource {
               location: lesson.raum,
               notes: lesson.badge,
               color: entryColor,
-              id: "$dayIndex-$lessonIndex-2"));
+              id: id2));
         }
 
         //1 week later
@@ -504,10 +553,15 @@ class TimeTableDataSource extends CalendarDataSource {
             location: lesson.raum,
             notes: lesson.lehrer,
             color: entryColor,
-            id: "$dayIndex-$lessonIndex-3"));
+            id: id3));
       }
     }
 
     appointments = events;
+  }
+  
+  // Get the text color for an appointment by ID
+  Color getTextColorForAppointment(String id) {
+    return textColorMap[id] ?? Colors.black;
   }
 }
